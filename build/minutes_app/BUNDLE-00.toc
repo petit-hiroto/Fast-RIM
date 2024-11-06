@@ -1,0 +1,3 @@
+([('minutes_app',
+   '/Users/watanabedaito/cursor/RIM/dist/minutes_app',
+   'EXECUTABLE')],)
