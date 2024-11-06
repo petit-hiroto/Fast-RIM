@@ -35,7 +35,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='minutes_app',
+    name='RIM_app',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -52,7 +52,7 @@ exe = EXE(
 
 app = BUNDLE(
     exe,
-    name='minutes_app.app',
+    name='RIM.app',
     icon=None,
     bundle_identifier=None,
 )

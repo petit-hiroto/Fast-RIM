@@ -1,3 +1,1 @@
-([('minutes_app',
-   '/Users/watanabedaito/cursor/RIM/dist/minutes_app',
-   'EXECUTABLE')],)
+([('RIM_app', '/Users/watanabedaito/cursor/RIM/dist/RIM_app', 'EXECUTABLE')],)

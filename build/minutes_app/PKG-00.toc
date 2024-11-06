@@ -1,4 +1,4 @@
-('/Users/watanabedaito/cursor/RIM/build/minutes_app/minutes_app.pkg',
+('/Users/watanabedaito/cursor/RIM/build/minutes_app/RIM_app.pkg',
  {'BINARY': True,
   'DATA': True,
   'EXECUTABLE': True,
