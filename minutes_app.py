@@ -952,6 +952,7 @@ def process_audio_file_async(audio_file, processed_files, start_time):
     # プロンプトが空でないか確認
     if not transcription_prompt:  # ここでグローバル変数を参照
         logging.error("プロンプトが空です。音声ファイルの処理を中止します。")
+        processing_done = True  # 経過時間の更新を停止
         root.after(0, lambda: messagebox.showerror("エラー", "プロンプトが空です。処理を中止します。"))
         return  # 処理を中止
 
