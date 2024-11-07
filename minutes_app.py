@@ -20,6 +20,7 @@ from docx import Document
 import datetime
 import xml.parsers.expat
 import webbrowser
+from dateutil import parser
 
 # ユーザーディレクトリのDocumentsフォルダのパスを取得
 documents_path = Path.home() / "Documents"
@@ -396,10 +397,12 @@ def create_excel(extracted_info, output_file):
     for row in ws['A1:B'+str(ws.max_row)]:
         for cell in row:
             # すべてのセルに細い枠線を設定
-            cell.border = openpyxl.styles.Border(left=openpyxl.styles.Side(style='thin'), 
-                                                 right=openpyxl.styles.Side(style='thin'), 
-                                                 top=openpyxl.styles.Side(style='thin'), 
-                                                 bottom=openpyxl.styles.Side(style='thin'))
+            cell.border = openpyxl.styles.Border(
+                left=openpyxl.styles.Side(style='thin'), 
+                right=openpyxl.styles.Side(style='thin'), 
+                top=openpyxl.styles.Side(style='thin'), 
+                bottom=openpyxl.styles.Side(style='thin')
+            )
             if cell.column == 1:  # A列（項目名）のセルの場合
                 cell.font = openpyxl.styles.Font(bold=True)  # 太字に設定
                 cell.fill = openpyxl.styles.PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")  # 背景色を設定
@@ -585,6 +588,14 @@ def create_minutes_from_template(data, template_path):
             if placeholder in paragraph.text:
                 old_text = paragraph.text
                 if value is not None:
+                    if key == '日時':
+                        try:
+                            # 日付を解析して標準形式に変換
+                            parsed_date = parser.parse(str(value))
+                            value = parsed_date.strftime('%Y-%m-%d')
+                        except (ValueError, TypeError) as e:
+                            logging.error(f"日付の解析に失敗しました: {value} - {str(e)}")
+                    
                     if key in no_bullet_points:
                         # カンマを消して改行を追加
                         new_text = paragraph.text.replace(placeholder, value.replace('。', '\n'))
