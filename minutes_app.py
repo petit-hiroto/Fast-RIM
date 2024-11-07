@@ -94,16 +94,12 @@ def create_extraction_prompt(text):
     2. 候補者の弱み
     3. 候補者の経験
     4. 候補者のスキル
-    5. 面接官のフィードバック
-    6. 次のステップ
 
     抽出する際は、必ず以下の形式で出力してください：
     候補者の強み: [候補者の強み]
     候補者の弱み: [候補者の弱み]
     候補者の経験: [候補者の経験]
     候補者のスキル: [候補者のスキル]
-    面接官のフィードバック: [面接官のフィードバック]
-    次のステップ: [次のステップ]
 
     注意事項:
     - 各項目を必ず上記の形式で出力してください。
@@ -111,6 +107,9 @@ def create_extraction_prompt(text):
     - 各行は必ず「[項目名]:」で始まるようにしてください。
     - 各項目の前に「*」や「**」などの記号を付けないでください。
     - 面接の内容が議事録形式で記されていれば構いません。インタビューの文章等からも適切に情報を抽出してください。
+    - 各項目は例のように意味の切れ目で「。」で区切って下さい。意味の切れ目以外は「。」を使用しないでください。例は[現職でプロジェクト管理能力とクライアント対応におけるコミュニケーションスキルを活かして業務を行ってきた, プロジェクト管理ツールとしてJiraやTrelloを利用, データ解析のプロジェクトではPythonとSQLを使用, チームワークを重要視する環境を好む]
+    - 出力前に各項目が確実に意味の切れ目で「。」で区切られているか確認してください。
+    - 候補者のスキルはスキルごとに「。」で区切ってください。「、」は使用しないでください。
 
     文章:
     {text}
@@ -362,7 +361,7 @@ def create_excel(extracted_info, output_file):
         "候補者の弱み",
         "候補者の経験",
         "候補者のスキル",
-        "面接官のフィードバック",
+        "面接官の所感",
         "次のステップ"
     ]
 
@@ -373,14 +372,25 @@ def create_excel(extracted_info, output_file):
     # 各行を処理して項目と内容をExcelに書き込みます
     for line in lines:
         line = line.strip()
-        for info in interview_info:
+        for info in interview_info[:-2]:  # "面接官の所感"と"次のステップ"を除く
             if line.startswith(info):
+                # []を削除して内容を取得
+                content = line.split(':', 1)[1].strip().strip('[]')
                 ws.cell(row=row, column=1, value=info)  # A列に項目名を書き込み
                 ws.cell(row=row, column=2, value=line.split(':', 1)[1].strip())  # B列に内容を書き込み
                 ws.cell(row=row, column=1).font = openpyxl.styles.Font(bold=True)  # 太字に設定
                 ws.cell(row=row, column=1).fill = openpyxl.styles.PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")  # 背景色を設定
                 ws.cell(row=row, column=1).alignment = Alignment(vertical='top')  # 上寄せに設定
                 row += 1
+
+    # "面接官の所感"と"次のステップ"を空欄で追加
+    for info in interview_info[-2:]:
+        ws.cell(row=row, column=1, value=info)  # A列に項目名を書き込み
+        ws.cell(row=row, column=2, value="")  # B列は空欄
+        ws.cell(row=row, column=1).font = openpyxl.styles.Font(bold=True)  # 太字に設定
+        ws.cell(row=row, column=1).fill = openpyxl.styles.PatternFill(start_color="E0E0E0", end_color="E0E0E0", fill_type="solid")  # 背景色を設定
+        ws.cell(row=row, column=1).alignment = Alignment(vertical='top')  # 上寄せに設定
+        row += 1
 
     # セルのスタイルを設定します
     for row in ws['A1:B'+str(ws.max_row)]:
@@ -534,7 +544,7 @@ def extract_info_from_xlsx(file_path):
         '候補者の弱み': sheet['B6'].value or '',
         '候補者の経験': sheet['B7'].value or '',
         '候補者のスキル': sheet['B8'].value or '',
-        '面接官のフィードバック': sheet['B9'].value or '',
+        '面接官の所感': sheet['B9'].value or '',
         '次のステップ': sheet['B10'].value or ''
     }
     
@@ -563,16 +573,28 @@ def create_minutes_from_template(data, template_path):
         '候補者の弱み': '候補者の弱み',
         '候補者の経験': '候補者の経験',
         '候補者のスキル': '候補者のスキル',
-        '面接官のフィードバック': '面接官のフィードバック',
+        '面接官の所感': '面接官の所感',
         '次のステップ': '次のステップ'
     }
+
+    no_bullet_points = {'日時', '場所', '候補者', '面接担当者'}
     
     for paragraph in doc.paragraphs:
         for key, value in data.items():
             placeholder = f'「{key}」'
             if placeholder in paragraph.text:
                 old_text = paragraph.text
-                new_text = paragraph.text.replace(placeholder, str(value) if value is not None else '')
+                if value is not None:
+                    if key in no_bullet_points:
+                        # カンマを消して改行を追加
+                        new_text = paragraph.text.replace(placeholder, value.replace('。', '\n'))
+                    else:
+                        # カンマを消して改行し、先頭に「・」を追加
+                        new_text = paragraph.text.replace(placeholder, '・' + value.replace('。', '\n・').replace('\n・ ', '\n・'))
+                        # 最後の「・」を削除
+                        new_text = new_text.rstrip('・')
+                else:
+                    new_text = paragraph.text.replace(placeholder, '')
                 paragraph.text = new_text
                 print(f"置換: '{old_text}' -> '{new_text}'")
 
@@ -699,7 +721,7 @@ def show_usage():
     usage_label = tk.Label(root, text="使い方", font=("Arial", 16, "bold"))
     usage_label.pack(pady=(120, 0))  # 上に60ピクセルの余白を追加
 
-    usage_text = "使い方は以下のWebページをご覧ください"
+    usage_text = "使い方は以下のWebページをご覧ください(議事録作成verのページですが使い方は同様です)"
     usage_info = tk.Label(root, text=usage_text, justify="left")
     usage_info.pack(pady=10)
 
@@ -708,7 +730,7 @@ def show_usage():
     link.pack(pady=10)
     link.bind("<Button-1>", lambda e: webbrowser.open("https://abiding-delivery-6d9.notion.site/1264d14a044c804f9dc7e41ce20a920f"))  # ここに実際のURLを入れてください
 
-    usage_text = "爆速議事録をご利用いただきありがとうございます！"
+    usage_text = "Fast RIMをご利用いただきありがとうございます！"
     usage_info = tk.Label(root, text=usage_text, justify="left")
     usage_info.pack(pady=10)
 
@@ -852,7 +874,7 @@ def show_settings():
     save_api_key_button.grid(row=7, column=0, pady=5)
 
     # 戻るボタンを右上に配置
-    back_button = tk.Button(root, text="戻る", command=show_main_menu, width=5, height=1)
+    back_button = tk.Button(root, text="戻る", command=lambda: show_main_menu(reload_prompt=True), width=5, height=1)
     back_button.place(x=800, y=20)
 
 def upload_audio_file():
@@ -867,11 +889,11 @@ def upload_audio_file():
         
         # 想定処理時間を計算
         if file_size_mb <= 10:
-            estimated_time = "1〜2分"
+            estimated_time = "1分"
         elif file_size_mb <= 20:
-            estimated_time = "2〜3分"
+            estimated_time = "1~2分"
         else:
-            estimated_time = "3〜5分"
+            estimated_time = "1~2分"
         
         # 想定処理時間を表示
         estimated_time_text = f"想定処理時間：約{estimated_time}"
